@@ -65,10 +65,9 @@ services:
   # ----------------------------------------------------------------------------
   # 2. Frontend Static Site (React 19 / Vite / Tailwind CSS v4)
   # ----------------------------------------------------------------------------
-  - type: static
+  - type: web
     name: urban-loom-frontend
-    plan: free
-    region: oregon
+    runtime: static
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
