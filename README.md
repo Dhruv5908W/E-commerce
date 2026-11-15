@@ -30,6 +30,7 @@
   - [4. Frontend Setup](#4-frontend-setup)
   - [5. Seed Sample Products](#5-seed-sample-products)
 - [Environment Variables Guide](#environment-variables-guide)
+- [Deploying to Render (Blueprint)](#deploying-to-render-blueprint)
 - [REST API Reference](#rest-api-reference)
 - [College Presentation & Viva Talking Points](#college-presentation--viva-talking-points)
 - [License & Acknowledgments](#license--acknowledgments)
@@ -170,7 +171,7 @@ Urban-Loom/
 │   └── package.json
 │
 ├── frontend/
-│   ├── public/                 # Static assets & Urban Loom SVG branding
+│   ├── public/                 # Static assets, SVG branding & _redirects (SPA routing)
 │   ├── src/
 │   │   ├── api/                # Axios instance & token refresh interceptor
 │   │   ├── components/         # Reusable UI widgets (Header, Footer, Cart, ProductCard)
@@ -189,6 +190,7 @@ Urban-Loom/
 │   ├── vite.config.js          # Vite build & plugin configuration
 │   └── package.json
 │
+├── render.yaml                 # Render Blueprint specification
 └── README.md                   # Project documentation
 ```
 
@@ -297,6 +299,49 @@ To quickly populate your catalog with sample apparel items:
 | Variable Name | Required | Description |
 | :--- | :---: | :--- |
 | `VITE_API_URL` | **Yes** | Full base URL of the backend API (e.g. `http://localhost:5000/api/v2`) |
+
+---
+
+## Deploying to Render (Blueprint)
+
+This repository includes a production-ready **Render Blueprint** (`render.yaml`) that automatically provisions both the **Express Web Service** and the **Vite Static Site** with a single click.
+
+### Step-by-Step Deployment
+
+1. **Push Changes to GitHub**:
+   Ensure all changes and `render.yaml` are pushed to your GitHub repository:
+   ```bash
+   git add .
+   git commit -m "Configure Render blueprint and security headers"
+   git push origin main
+   ```
+
+2. **Connect to Render**:
+   - Go to [dashboard.render.com](https://dashboard.render.com/).
+   - Click **New +** in the top navigation bar and select **Blueprint**.
+   - Connect your GitHub account and choose your `urban-loom` repository.
+
+3. **Configure Environment Variables**:
+   Render will inspect `render.yaml` and prompt you to input the secret credentials:
+   - `MONGO_URI`: Your MongoDB Atlas connection string.
+   - `IMAGEKIT_PUBLIC_KEY`, `IMAGEKIT_PRIVATE_KEY`, `IMAGEKIT_URL_ENDPOINT`: From your ImageKit dashboard.
+   - `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`: From your Razorpay dashboard (or dummy test keys).
+   - `SMTP_*`: Your email credentials for password resets.
+
+4. **Service Linking**:
+   - `CORS_ORIGIN` & `FRONTEND_URL`: Set to your frontend URL (e.g., `https://urban-loom-frontend.onrender.com`).
+   - `VITE_API_URL`: Set to your backend API URL (e.g., `https://urban-loom-backend.onrender.com/api/v2`).
+
+5. **Deploy**:
+   Click **Apply**. Render will automatically build the React Vite frontend, deploy the Express API, generate cryptographically random `ACCESS_TOKEN_SECRET` and `REFRESH_TOKEN_SECRET` keys, configure SSL, and activate health checks.
+
+### Production Security Checklist
+
+- [x] **Reverse Proxy Trust**: `app.set("trust proxy", 1)` enabled for accurate IP throttling and secure cookies behind Render's load balancer.
+- [x] **Cross-Origin Resource Policy (CORP)**: Configured with `cross-origin` policy so ImageKit CDN photos load without browser blocking.
+- [x] **Dual Rate Limiting**: Global limiter on `/api` (300 req/15 min) + strict limiter on `/login`, `/register`, and `/forgot-password` (20 req/15 min).
+- [x] **Double-Token Security**: `HttpOnly`, `SameSite=None`, and `Secure` cookies for cross-domain production authentication.
+- [x] **SPA Routing Preservation**: `frontend/public/_redirects` ensures direct visits or browser reloads on `/cart`, `/info/*`, and `/admin` never 404.
 
 ---
 
