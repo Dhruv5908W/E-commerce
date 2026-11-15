@@ -32,7 +32,11 @@ app.use(cors({
       // allow requests with no origin (curl, mobile apps, server-to-server)
       if (!origin) return callback(null, true);
       const cleanOrigin = origin.replace(/\/+$/, "");
-      if (allowedOrigins.includes("*") || allowedOrigins.includes(cleanOrigin)) {
+      if (
+        allowedOrigins.includes("*") ||
+        allowedOrigins.includes(cleanOrigin) ||
+        cleanOrigin.endsWith(".onrender.com")
+      ) {
         return callback(null, true);
       }
       return callback(null, false);

@@ -32,9 +32,9 @@ services:
       - key: MONGO_URI
         sync: false
       - key: CORS_ORIGIN
-        sync: false
+        value: https://urban-loom-frontend.onrender.com
       - key: FRONTEND_URL
-        sync: false
+        value: https://urban-loom-frontend.onrender.com
       - key: ACCESS_TOKEN_SECRET
         generateValue: true
       - key: ACCESS_TOKEN_EXPIRY
@@ -78,4 +78,4 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        sync: false
+        value: https://urban-loom-backend.onrender.com/api/v2

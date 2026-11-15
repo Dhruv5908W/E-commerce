@@ -1,7 +1,22 @@
 import axios from "axios";
 
+const resolveBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  const isBrowser = typeof window !== "undefined";
+
+  if (isBrowser && window.location.hostname.endsWith(".onrender.com")) {
+    if (envUrl && !envUrl.includes("localhost") && !envUrl.includes("127.0.0.1")) {
+      return envUrl;
+    }
+    const backendHost = window.location.hostname.replace("-frontend", "-backend");
+    return `https://${backendHost}/api/v2`;
+  }
+
+  return envUrl || "http://localhost:5000/api/v2";
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL, // e.g. http://localhost:5000/api/v2
+  baseURL: resolveBaseUrl(), // e.g. https://urban-loom-backend.onrender.com/api/v2 or local
   withCredentials: true, // required so accesstoken/refreshtoken cookies are sent
 });
 
