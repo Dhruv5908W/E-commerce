@@ -5,6 +5,7 @@ import { apierrors } from "../src/utils/apierrors.js";
 import { apiresponse } from "../src/utils/apiresponse.js";
 import uploadToImageKit, { deleteFromImageKit } from "../src/utils/imagekit.js";
 import { Product } from "../src/models/product.models.js";
+import { Category } from "../src/models/category.models.js";
 
 const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
