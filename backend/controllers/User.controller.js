@@ -138,7 +138,7 @@ const LogoutUser = asyncHandler(async (req, res) => {
 const refreshAccessToken = asyncHandler(async (req, res) => {
   const incomingRefreshToken = req.cookies?.refreshtoken || req.body?.refreshToken;
   if (!incomingRefreshToken) {
-    throw new apierrors(401, "Refresh token is missing");
+    throw new apierrors(401, "Session expired, please log in again");
   }
   try {
     const decoded = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);

@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../api/axiosClient.js";
+import { setAuthTokens, clearAuthTokens } from "../../api/tokenStorage.js";
 
 export const registerUser = createAsyncThunk("user/register", async (payload, { rejectWithValue }) => {
   try {
@@ -13,6 +14,12 @@ export const registerUser = createAsyncThunk("user/register", async (payload, { 
 export const loginUser = createAsyncThunk("user/login", async (payload, { rejectWithValue }) => {
   try {
     const { data } = await api.post("/users/login", payload);
+    if (data.data?.AccessToken) {
+      setAuthTokens({
+        accessToken: data.data.AccessToken,
+        refreshToken: data.data.RefreshToken,
+      });
+    }
     return data.data.user;
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || "Login failed");
@@ -24,15 +31,19 @@ export const logoutUser = createAsyncThunk("user/logout", async (_, { rejectWith
     await api.post("/users/logout");
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || "Logout failed");
+  } finally {
+    clearAuthTokens();
   }
 });
 
-// call this once on app load to check if the user has a valid session (cookie)
+// Call this once on app load to check if the user has a valid session (cookie or stored token)
 export const fetchCurrentUser = createAsyncThunk("user/fetchCurrent", async (_, { rejectWithValue }) => {
   try {
     const { data } = await api.get("/users/me");
     return data.data.user;
   } catch (err) {
+    // If not logged in, clear any stale local tokens
+    clearAuthTokens();
     return rejectWithValue(err.response?.data?.message || "Not logged in");
   }
 });

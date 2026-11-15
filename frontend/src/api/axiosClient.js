@@ -1,4 +1,10 @@
 import axios from "axios";
+import {
+  getAccessToken,
+  getRefreshToken,
+  setAuthTokens,
+  clearAuthTokens,
+} from "./tokenStorage.js";
 
 const resolveBaseUrl = () => {
   const envUrl = import.meta.env.VITE_API_URL;
@@ -17,10 +23,23 @@ const resolveBaseUrl = () => {
 
 const api = axios.create({
   baseURL: resolveBaseUrl(), // e.g. https://urban-loom-backend.onrender.com/api/v2 or local
-  withCredentials: true, // required so accesstoken/refreshtoken cookies are sent
+  withCredentials: true, // required for cookie-based authentication
 });
 
-// if a request fails with 401, try refreshing the access token once, then retry it
+// Attach Bearer token as Authorization header on every request (ensures 100% compatibility
+// across browsers like Safari, Chrome Incognito, and Brave that block third-party cookies)
+api.interceptors.request.use(
+  (config) => {
+    const token = getAccessToken();
+    if (token && !config.headers.Authorization) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// If a request fails with 401, refresh the access token once IF a refresh token exists
 let isRefreshing = false;
 let queuedRequests = [];
 
@@ -43,22 +62,44 @@ api.interceptors.response.use(
       url.includes("/forgot-password") ||
       url.includes("/reset-password");
 
-    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRoute) {
+    // Only attempt refresh if:
+    // 1. Status is 401
+    // 2. Request hasn't already been retried
+    // 3. Not an auth endpoint itself
+    // 4. We actually HAVE a refresh token (prevents guest users from triggering "Refresh token is missing")
+    const refreshToken = getRefreshToken();
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRoute && refreshToken) {
       if (isRefreshing) {
         // queue this request until the in-flight refresh finishes
         return new Promise((resolve, reject) => {
           queuedRequests.push({ resolve, reject });
-        }).then(() => api(originalRequest));
+        }).then(() => {
+          const newToken = getAccessToken();
+          if (newToken) {
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          }
+          return api(originalRequest);
+        });
       }
 
       originalRequest._retry = true;
       isRefreshing = true;
 
       try {
-        await api.post("/users/refresh-token");
+        const { data } = await api.post("/users/refresh-token", { refreshToken });
+        const newAccess = data.data?.AccessToken;
+        const newRefresh = data.data?.RefreshToken || refreshToken;
+
+        if (newAccess) {
+          setAuthTokens({ accessToken: newAccess, refreshToken: newRefresh });
+          originalRequest.headers.Authorization = `Bearer ${newAccess}`;
+        }
+
         processQueue(null);
         return api(originalRequest);
       } catch (refreshError) {
+        clearAuthTokens();
         processQueue(refreshError);
         return Promise.reject(refreshError);
       } finally {
